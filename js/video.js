@@ -76,7 +76,8 @@
     ['#d8f3dc', '#ffe08a'], ['#e0fbfc', '#ffc8dd']
   ];
 
-  var VOICE_DEFAULTS = {
+  // Voice defaults come from the audio engine when available.
+  var VOICE_DEFAULTS = (global.MiloLina.audio && global.MiloLina.audio.voiceBase) || {
     milo: { pitch: 1.3, rate: 1.0 },
     lina: { pitch: 1.6, rate: 1.0 },
     bobo: { pitch: 2.0, rate: 1.25 }
@@ -120,72 +121,62 @@
     this.playing = false;
     this.recording = false;
     this.raf = 0;
-    this.audioCtx = null;
-    this.musicTimer = null;
-    this.mediaStream = null;
+    this.music = null;
+    this.musicVolume = (opts.musicVolume !== undefined) ? opts.musicVolume : 0.6;
     this.recorder = null;
     this.chunks = [];
     this.lastSpoken = '';
+    this.lastMoodKey = '';
+    this.lastSfxKey = '';
   }
 
   Player.prototype.imageFor = function (id) {
     return this.images[id] || this.placeholders[id] || null;
   };
 
-  Player.prototype.startMusic = function () {
+  // Music + SFX engine (js/audio.js). Started once per playback; its
+  // stream is what the recorder captures, so exports contain music+SFX.
+  Player.prototype.startAudio = function () {
     try {
-      var AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      var ctx = new AC();
-      this.audioCtx = ctx;
-      var gain = ctx.createGain();
-      gain.gain.value = 0.12;
-      gain.connect(ctx.destination);
-      var dest = null;
-      if (ctx.createMediaStreamDestination) {
-        dest = ctx.createMediaStreamDestination();
-        gain.connect(dest);
-        this.mediaStream = dest.stream;
+      var A = global.MiloLina.audio;
+      if (!A) return;
+      var engine = new A.MusicEngine({ volume: this.musicVolume });
+      if (engine.start()) {
+        this.music = engine;
+        this.lastMoodKey = '';
+        this.lastSfxKey = '';
       }
-      var step = 0;
-      var self = this;
-      this.musicTimer = setInterval(function () {
-        if (!self.playing) return;
-        var osc = ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.value = MUSIC_NOTES[step % MUSIC_NOTES.length];
-        osc.connect(gain);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.32);
-        step++;
-      }, 360);
     } catch (e) { /* audio is best-effort */ }
   };
 
-  Player.prototype.stopMusic = function () {
-    if (this.musicTimer) clearInterval(this.musicTimer);
-    this.musicTimer = null;
-    if (this.audioCtx) {
-      try { this.audioCtx.close(); } catch (e) { /* ignore */ }
-      this.audioCtx = null;
+  Player.prototype.stopAudio = function () {
+    if (this.music) {
+      try { this.music.stop(); } catch (e) { /* ignore */ }
+      this.music = null;
     }
-    this.mediaStream = null;
+    this.lastMoodKey = '';
+    this.lastSfxKey = '';
   };
 
-  Player.prototype.speak = function (speakerId, line) {
+  // Expressive device-voice delivery: character base + scene emotion +
+  // punctuation shape the pitch and speed of every line.
+  Player.prototype.speak = function (speakerId, line, emotion) {
     try {
       if (!('speechSynthesis' in window)) return;
+      var A = global.MiloLina.audio;
       var v = this.voices[speakerId] || {};
+      var pros = A ? A.prosodyFor(speakerId, emotion, line, v) : null;
       var def = VOICE_DEFAULTS[speakerId] || { pitch: 1.2, rate: 1.0 };
       var u = new SpeechSynthesisUtterance(line);
-      u.pitch = v.pitch !== undefined ? v.pitch : def.pitch;
-      u.rate = v.rate !== undefined ? v.rate : def.rate;
+      u.pitch = pros ? pros.pitch : (v.pitch !== undefined ? v.pitch : def.pitch);
+      u.rate = pros ? pros.rate : (v.rate !== undefined ? v.rate : def.rate);
       if (v.voiceURI) {
         var all = window.speechSynthesis.getVoices();
         for (var i = 0; i < all.length; i++) {
           if (all[i].voiceURI === v.voiceURI) { u.voice = all[i]; break; }
         }
       }
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch (e) { /* speech is best-effort */ }
   };
@@ -266,12 +257,31 @@
     ctx.fillRect(0, H - 16, W * (t / timeline.total), 16);
     ctx.restore();
 
+    // Music follows the scene: mood theme, ducking under dialogue,
+    // and one-shot sound effects once per scene.
+    if (this.music && global.MiloLina.audio) {
+      var A = global.MiloLina.audio;
+      var isLast = pos.index === timeline.items.length - 1;
+      var theme = isLast ? 'fanfare' : A.themeForEmotion(scene.emotion);
+      if (theme !== this.lastMoodKey) {
+        this.lastMoodKey = theme;
+        this.music.setMood(theme);
+      }
+      this.music.setDucking(!!sub);
+      if (scene.id !== this.lastSfxKey) {
+        this.lastSfxKey = scene.id;
+        var eng = this.music;
+        A.sfxForScene(scene, isLast).forEach(function (ev) {
+          eng.playSfx(ev.name, ev.at);
+        });
+      }
+    }
     // Speak each subtitle line once when it starts (preview only).
     if (sub && !this.recording) {
       var key = scene.id + ':' + sub.index;
       if (key !== this.lastSpoken) {
         this.lastSpoken = key;
-        this.speak(sub.speaker, sub.line);
+        this.speak(sub.speaker, sub.line, scene.emotion);
       }
     }
   };
@@ -285,10 +295,11 @@
     this.chunks = [];
     var stream = null;
     if (record && this.canvas.captureStream) {
-      this.startMusic();
+      this.startAudio();
       var tracks = [];
       try { tracks = tracks.concat(this.canvas.captureStream(30).getVideoTracks()); } catch (e) { /* ignore */ }
-      if (this.mediaStream) tracks = tracks.concat(this.mediaStream.getAudioTracks());
+      var astream = this.music ? this.music.getStream() : null;
+      if (astream) tracks = tracks.concat(astream.getAudioTracks());
       if (tracks.length) {
         stream = new MediaStream(tracks);
         var mime = '';
@@ -312,7 +323,7 @@
         }
       }
     } else {
-      this.startMusic();
+      this.startAudio();
     }
     var t0 = performance.now();
     var loop = function (now) {
@@ -336,7 +347,7 @@
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
     try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
-    this.stopMusic();
+    this.stopAudio();
     if (this.recorder && this.recorder.state !== 'inactive') {
       try { this.recorder.stop(); } catch (e) { /* ignore */ }
     }

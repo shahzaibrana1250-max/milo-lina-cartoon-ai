@@ -406,6 +406,7 @@
         images: images,
         placeholders: placeholders,
         voices: (state.settings.voices || {}),
+        musicVolume: ((state.settings.musicVolume !== undefined ? state.settings.musicVolume : 60) / 100),
         onStatus: function (m) { el('videoStatus').textContent = m; },
         onVideo: function (blob) {
           var url = URL.createObjectURL(blob);
@@ -433,6 +434,13 @@
       if (videoPlayer) videoPlayer.stop(false);
       el('videoStatus').textContent = 'Stopped.';
     };
+    var mv = el('musicVolume');
+    mv.value = (state.settings.musicVolume !== undefined) ? state.settings.musicVolume : 60;
+    mv.oninput = function () {
+      state.settings.musicVolume = parseInt(mv.value, 10);
+      saveAll();
+      if (videoPlayer && videoPlayer.music) videoPlayer.music.setVolume(state.settings.musicVolume / 100);
+    };
     renderVoiceSettings();
     renderHailuoSettings(p);
   }
@@ -457,8 +465,35 @@
       row.innerHTML = '<strong>' + esc(c.name) + '</strong>' +
         '<label>Voice <select data-v="voice">' + opts + '</select></label>' +
         '<label>Pitch <input type="range" min="0.5" max="2" step="0.1" data-v="pitch" value="' + (cur.pitch !== undefined ? cur.pitch : def.pitch) + '"></label>' +
-        '<label>Speed <input type="range" min="0.8" max="1.4" step="0.05" data-v="rate" value="' + (cur.rate !== undefined ? cur.rate : def.rate) + '"></label>';
+        '<label>Speed <input type="range" min="0.8" max="1.4" step="0.05" data-v="rate" value="' + (cur.rate !== undefined ? cur.rate : def.rate) + '"></label>' +
+        '<button class="btn small" data-test>🔊 Test ' + esc(c.name) + '\'s voice</button>';
       box.appendChild(row);
+      row.querySelector('[data-test]').onclick = function () {
+        try {
+          if (!('speechSynthesis' in window)) { toast('No device voices on this device.'); return; }
+          var samples = {
+            milo: "Hi! I'm Milo! Let's go on an adventure!",
+            lina: "Hi! I'm Lina! This is so much fun!",
+            bobo: "Hi! I'm Bobo! Boing, boing, let's hop!"
+          };
+          var line = samples[c.id] || 'Hello, friends!';
+          var v = state.settings.voices[c.id] || {};
+          var pros = (ML.audio && ML.audio.prosodyFor)
+            ? ML.audio.prosodyFor(c.id, 'joyful', line, v)
+            : { pitch: v.pitch || 1.2, rate: v.rate || 1.0 };
+          var u = new SpeechSynthesisUtterance(line);
+          u.pitch = pros.pitch;
+          u.rate = pros.rate;
+          if (v.voiceURI) {
+            var all = window.speechSynthesis.getVoices();
+            for (var i = 0; i < all.length; i++) {
+              if (all[i].voiceURI === v.voiceURI) { u.voice = all[i]; break; }
+            }
+          }
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(u);
+        } catch (e) { toast('Voice test failed on this device.'); }
+      };
       row.querySelectorAll('[data-v]').forEach(function (input) {
         input.addEventListener('change', function () {
           var v = state.settings.voices[c.id] || {};

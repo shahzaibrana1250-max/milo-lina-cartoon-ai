@@ -27,6 +27,15 @@ videos for YouTube Shorts. **Phase 1 runs completely free with no API key.**
   browser: Ken Burns camera motion over character art, scene titles and
   dialogue as subtitles, free device voices per character, cheerful music,
   and **.webm export** via Record. No key, no account, no cost.
+- **Audio upgrade** — original synthesized preschool music (ukulele-style
+  plucks, xylophone, marimba, bells, claps, gentle percussion) with a
+  different theme per scene mood, sound effects (sparkle, magic, chime,
+  boing, footsteps, fanfare), smooth mood crossfades, and music that ducks
+  under dialogue so words stay clear. All melodies are original
+  compositions made in code — no samples, no copied tunes. Voices use
+  per-character pitch/speed plus emotion prosody (excited lines go higher
+  and faster, sad lines lower and slower). Exported videos contain the
+  music + SFX mix; spoken voices play live only (browser limit).
 - **Honest limits:** this is an animatic (motion over still art), not AI
   motion. Spoken voices play live only — browsers cannot route device
   speech into a recording, so exports carry music + subtitles, not voices.
