@@ -135,3 +135,9 @@ a.btn.primary { color: #fff; }
 #hailuoResult video { width: 100%; border-radius: 12px; margin-top: 10px; }
 .voice-row { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
 .voice-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+/* [hidden] must win over .btn's display:block, or buttons with no action
+   yet (e.g. Download before a recording exists) show up dead. */
+[hidden] { display: none !important; }
+.btn:disabled { opacity: 0.5; }
+#videoOpenLink { display: block; text-align: center; margin-top: 8px; }

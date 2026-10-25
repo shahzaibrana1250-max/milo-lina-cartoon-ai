@@ -124,6 +124,7 @@
     this.master = null;
     this.musicBus = null;
     this.sfxBus = null;
+    this.voiceBus = null;
     this.dest = null;
     this.analyser = null;
     this.timer = null;
@@ -279,6 +280,9 @@
       this.sfxBus = ctx.createGain();
       this.sfxBus.gain.value = 1.0;
       this.sfxBus.connect(this.master);
+      this.voiceBus = ctx.createGain();
+      this.voiceBus.gain.value = 1.0;
+      this.voiceBus.connect(this.master);
       if (ctx.createMediaStreamDestination) {
         this.dest = ctx.createMediaStreamDestination();
         this.master.connect(this.dest);
@@ -356,6 +360,19 @@
     }
   };
 
+  // Play a pre-made voice clip (AudioBuffer) through the mix so it IS
+  // captured by the recorder. This is how file-based voice tracks land
+  // in exports; device speech (speechSynthesis) cannot be routed here.
+  MusicEngine.prototype.playBuffer = function (buffer, delaySec) {
+    if (!this.ctx || !buffer) return;
+    try {
+      var src = this.ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(this.voiceBus || this.master);
+      src.start(this.ctx.currentTime + (delaySec || 0));
+    } catch (e) { /* ignore */ }
+  };
+
   MusicEngine.prototype.stop = function () {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
@@ -364,6 +381,7 @@
       this.ctx = null;
     }
     this.dest = null;
+    this.voiceBus = null;
     this.ducked = false;
   };
 

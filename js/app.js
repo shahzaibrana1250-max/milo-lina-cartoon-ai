@@ -383,55 +383,108 @@
     });
   }
 
+  // The last finished recording survives tab switches.
+  var lastVideo = null;
+
+  function showReadyVideo() {
+    var a = el('btnDownloadVideo');
+    var open = el('videoOpenLink');
+    if (lastVideo) {
+      a.href = lastVideo.url;
+      a.download = lastVideo.name;
+      a.hidden = false;
+      open.href = lastVideo.url;
+      open.hidden = false;
+    } else {
+      a.removeAttribute('href');
+      a.hidden = true;
+      open.hidden = true;
+    }
+  }
+
   function renderVideo() {
     var p = getActive();
     var info = el('videoInfo');
     if (!p) {
       info.textContent = 'No active project. Create one on the Projects tab first.';
+      el('btnPlayVideo').onclick = function () {
+        el('videoStatus').textContent = 'No active project. Create one on the Projects tab first.';
+      };
+      el('btnRecordVideo').onclick = el('btnPlayVideo').onclick;
       return;
     }
     var timeline = ML.video.buildTimeline(p.scenes);
     var hailuo = ML.providers.get('hailuo');
     info.textContent = p.scenes.length + ' scenes · ~' + timeline.total + ' seconds · vertical 9:16 · ' +
       'Real-AI estimate (H3 768p, only if you use it): ~$' + hailuo.estimateCost(timeline.total) + '.';
-    el('btnDownloadVideo').hidden = true;
-    loadPlayerImages().then(function (images) {
-      var placeholders = {};
-      ML.characters.list.forEach(function (c) {
-        var img = new Image();
-        img.src = c.placeholder;
-        placeholders[c.id] = img;
-      });
-      videoPlayer = new ML.video.Player(el('videoCanvas'), {
-        images: images,
-        placeholders: placeholders,
-        voices: (state.settings.voices || {}),
-        musicVolume: ((state.settings.musicVolume !== undefined ? state.settings.musicVolume : 60) / 100),
-        onStatus: function (m) { el('videoStatus').textContent = m; },
-        onVideo: function (blob) {
-          var url = URL.createObjectURL(blob);
-          var a = el('btnDownloadVideo');
-          a.href = url;
-          a.download = (p.title || 'milo-lina-video').replace(/[^\w\- ]+/g, '') + '.webm';
-          a.hidden = false;
-          toast('Video recorded — tap Download video.');
+    showReadyVideo();
+    // Create the player IMMEDIATELY with placeholders so Record works
+    // right away; real character images swap in when they finish loading.
+    var placeholders = {};
+    ML.characters.list.forEach(function (c) {
+      var img = new Image();
+      img.src = c.placeholder;
+      placeholders[c.id] = img;
+    });
+    videoPlayer = new ML.video.Player(el('videoCanvas'), {
+      images: {},
+      placeholders: placeholders,
+      voices: (state.settings.voices || {}),
+      musicVolume: ((state.settings.musicVolume !== undefined ? state.settings.musicVolume : 60) / 100),
+      onStatus: function (m) {
+        el('videoStatus').textContent = m;
+        if (m.indexOf('failed') >= 0 || m.indexOf('not supported') >= 0 || m.indexOf('Recording stopped') >= 0) {
+          el('btnRecordVideo').disabled = false;
         }
-      });
+      },
+      onVideo: function (blob) {
+        el('btnRecordVideo').disabled = false;
+        if (!blob || !blob.size) {
+          el('videoStatus').textContent = 'Recording produced an empty file. Please try recording again.';
+          return;
+        }
+        if (lastVideo) { try { URL.revokeObjectURL(lastVideo.url); } catch (e) { /* ignore */ } }
+        lastVideo = {
+          url: URL.createObjectURL(blob),
+          name: (p.title || 'milo-lina-video').replace(/[^\w\- ]+/g, '') + '.webm'
+        };
+        showReadyVideo();
+        el('videoStatus').textContent = 'Video ready (' + Math.round(blob.size / 1024) + ' KB) — tap Download video.';
+        toast('Video recorded — tap Download video.');
+      }
+    });
+    el('videoStatus').textContent = 'Ready. Loading character images…';
+    loadPlayerImages().then(function (images) {
+      if (videoPlayer) videoPlayer.images = images;
+      if (el('videoStatus').textContent.indexOf('Loading character images') === 0) {
+        el('videoStatus').textContent = 'Ready — tap Play or Record.';
+      }
     });
     el('btnPlayVideo').onclick = function () {
-      if (!videoPlayer) { toast('Loading images… try again in a second.'); return; }
-      videoPlayer.play(ML.video.buildTimeline(p.scenes), false);
+      try {
+        videoPlayer.play(ML.video.buildTimeline(p.scenes), false);
+      } catch (e) {
+        el('videoStatus').textContent = 'Preview failed: ' + (e && e.message ? e.message : 'unknown error');
+      }
     };
     el('btnRecordVideo').onclick = function () {
-      if (!videoPlayer) { toast('Loading images… try again in a second.'); return; }
       if (typeof MediaRecorder === 'undefined') {
-        toast('Recording is not supported in this browser. Preview still works.');
+        el('videoStatus').textContent = 'Recording is not supported in this browser — preview still works.';
         return;
       }
-      videoPlayer.play(ML.video.buildTimeline(p.scenes), true);
+      try {
+        el('btnRecordVideo').disabled = true;
+        el('videoStatus').textContent = 'Recording starting…';
+        videoPlayer.play(ML.video.buildTimeline(p.scenes), true);
+        if (!videoPlayer.recording) el('btnRecordVideo').disabled = false;
+      } catch (e) {
+        el('btnRecordVideo').disabled = false;
+        el('videoStatus').textContent = 'Recording failed: ' + (e && e.message ? e.message : 'unknown error');
+      }
     };
     el('btnStopVideo').onclick = function () {
       if (videoPlayer) videoPlayer.stop(false);
+      el('btnRecordVideo').disabled = false;
       el('videoStatus').textContent = 'Stopped.';
     };
     var mv = el('musicVolume');

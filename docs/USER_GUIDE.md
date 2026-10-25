@@ -55,10 +55,19 @@ from then on.
   use the Test button to hear each one. Lines are shaped by emotion:
   excited lines sound higher and faster, sad lines lower and slower.
 - **Record video** records the same playback and lets you download a .webm
-  file. The download contains the music + sound effects mix and subtitles.
-  Spoken voices play live only and are not in the download (a browser
-  limit — device speech cannot be recorded by a page). Convert .webm to
-  .mp4 with a free converter if Shorts needs .mp4.
+  file. Watch the status line under the video: it shows "Recording
+  starting…", then a live second counter ("Recording… 12s / 60s"), then
+  "Video ready (… KB) — tap Download video." The Record button is disabled
+  while recording so a double-tap cannot restart it, and the Download
+  button only appears once a real file exists — if you ever see a Download
+  button before recording, it is a bug; tell me. The download stays
+  available if you switch tabs and come back. If a download does not start
+  on your phone, use the "open the video in a new tab" link, then save it
+  from there. The download contains the music + sound effects mix and
+  subtitles. Spoken voices play live only and are not in the download (a
+  browser limit — device speech cannot be recorded by a page). Convert
+  .webm to .mp4 with a free converter if Shorts needs .mp4; .webm plays
+  directly on Android and uploads to YouTube as-is.
 - **Real AI video (optional)** — MiniMax H3 can render true AI motion for a
   scene. It is paid (~$0.08/second at 768p, no free tier), needs your own
   key, and is untested until you try it. Start with the Scene 1 test button.

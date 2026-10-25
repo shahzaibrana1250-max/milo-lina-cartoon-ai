@@ -128,6 +128,10 @@
     this.lastSpoken = '';
     this.lastMoodKey = '';
     this.lastSfxKey = '';
+    this.voiceClips = opts.voiceClips || {};
+    this.lastRecSecond = -1;
+    this.recGen = 0;
+    this.discardRecording = false;
   }
 
   Player.prototype.imageFor = function (id) {
@@ -276,12 +280,16 @@
         });
       }
     }
-    // Speak each subtitle line once when it starts (preview only).
-    if (sub && !this.recording) {
+    // One spoken line per subtitle: a file-based voice clip when one
+    // exists (it IS captured in exports), otherwise live device speech
+    // (preview only — browsers cannot record device speech).
+    if (sub) {
       var key = scene.id + ':' + sub.index;
       if (key !== this.lastSpoken) {
         this.lastSpoken = key;
-        this.speak(sub.speaker, sub.line, scene.emotion);
+        var clip = this.voiceClips ? this.voiceClips[key] : null;
+        if (clip && this.music) this.music.playBuffer(clip, 0);
+        else if (!this.recording) this.speak(sub.speaker, sub.line, scene.emotion);
       }
     }
   };
@@ -292,52 +300,99 @@
     this.playing = true;
     this.recording = !!record;
     this.lastSpoken = '';
+    this.lastRecSecond = -1;
     this.chunks = [];
-    var stream = null;
-    if (record && this.canvas.captureStream) {
+    this.recorder = null;
+    this.discardRecording = false;
+    var gen = ++this.recGen;
+    if (record) {
+      if (!this.canvas.captureStream) {
+        this.playing = false;
+        this.recording = false;
+        this.onStatus('Recording is not supported in this browser — preview still works.');
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        this.playing = false;
+        this.recording = false;
+        this.onStatus('Recording is not supported in this browser — preview still works.');
+        return;
+      }
       this.startAudio();
       var tracks = [];
       try { tracks = tracks.concat(this.canvas.captureStream(30).getVideoTracks()); } catch (e) { /* ignore */ }
       var astream = this.music ? this.music.getStream() : null;
       if (astream) tracks = tracks.concat(astream.getAudioTracks());
-      if (tracks.length) {
-        stream = new MediaStream(tracks);
-        var mime = '';
-        if (typeof MediaRecorder !== 'undefined') {
-          if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mime = 'video/webm;codecs=vp9';
-          else if (MediaRecorder.isTypeSupported('video/webm')) mime = 'video/webm';
-        }
-        try {
-          this.recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-          this.recorder.ondataavailable = function (e) {
-            if (e.data && e.data.size) self.chunks.push(e.data);
-          };
-          this.recorder.onstop = function () {
-            var blob = new Blob(self.chunks, { type: self.recorder.mimeType || 'video/webm' });
-            self.onVideo(blob);
-          };
-          this.recorder.start(1000);
-        } catch (e) {
-          this.onStatus('Recording is not supported in this browser. Preview still works.');
-          this.recording = false;
-        }
+      if (!tracks.length) {
+        this.playing = false;
+        this.recording = false;
+        this.onStatus('Recording failed: no video or audio track could be captured. Try preview, then record again.');
+        return;
       }
+      var stream = new MediaStream(tracks);
+      var mime = '';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mime = 'video/webm;codecs=vp9';
+      else if (MediaRecorder.isTypeSupported('video/webm')) mime = 'video/webm';
+      var recMime = mime || 'video/webm';
+      try {
+        this.recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        this.recorder.ondataavailable = function (e) {
+          if (gen !== self.recGen) return;
+          if (e.data && e.data.size) self.chunks.push(e.data);
+        };
+        this.recorder.onerror = function () {
+          self.onStatus('Recording failed in this browser. Try closing other apps, then record again.');
+        };
+        this.recorder.onstop = function () {
+          if (gen !== self.recGen) return;
+          if (self.discardRecording) { self.discardRecording = false; return; }
+          var blob = new Blob(self.chunks, { type: recMime });
+          self.onVideo(blob);
+        };
+        this.recorder.start(1000);
+      } catch (e) {
+        this.playing = false;
+        this.recording = false;
+        this.onStatus('Recording is not supported in this browser — preview still works.');
+        return;
+      }
+      this.onStatus('Recording started… 0s / ' + timeline.total + 's');
     } else {
       this.startAudio();
+      this.onStatus('Playing preview…');
     }
     var t0 = performance.now();
     var loop = function (now) {
       if (!self.playing) return;
       var t = (now - t0) / 1000;
       if (t >= timeline.total) {
-        self.draw(timeline, timeline.total);
+        try { self.draw(timeline, timeline.total); } catch (e) { /* final frame is best-effort */ }
         self.stop(true);
         return;
       }
-      self.draw(timeline, t);
+      try {
+        self.draw(timeline, t);
+      } catch (e) {
+        self.playing = false;
+        if (self.recording) {
+          self.discardRecording = true;
+          try { if (self.recorder && self.recorder.state !== 'inactive') self.recorder.stop(); } catch (err) { /* ignore */ }
+          self.onStatus('Recording stopped: a scene failed to render (' + (e && e.message ? e.message : 'unknown error') + ').');
+        } else {
+          self.onStatus('Preview stopped: ' + (e && e.message ? e.message : 'unknown error'));
+        }
+        self.stop(false);
+        return;
+      }
+      if (self.recording) {
+        var sec = Math.floor(t);
+        if (sec !== self.lastRecSecond) {
+          self.lastRecSecond = sec;
+          self.onStatus('Recording… ' + sec + 's / ' + timeline.total + 's — please keep this tab open.');
+        }
+      }
       self.raf = requestAnimationFrame(loop);
     };
-    this.onStatus(record ? 'Recording… please wait until it finishes.' : 'Playing preview…');
     this.raf = requestAnimationFrame(loop);
   };
 
@@ -348,11 +403,13 @@
     this.raf = 0;
     try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
     this.stopAudio();
+    if (!finished && this.recording) this.discardRecording = true;
     if (this.recorder && this.recorder.state !== 'inactive') {
       try { this.recorder.stop(); } catch (e) { /* ignore */ }
     }
-    if (finished && this.recording) this.onStatus('Video ready below — tap Download video.');
-    else if (finished) this.onStatus('Preview finished.');
+    // NOTE: 'Video ready' is set only by onVideo, once a real file
+    // exists. Setting it here would lie when no recorder ever ran.
+    if (finished && !this.recording) this.onStatus('Preview finished.');
     this.recording = false;
   };
 
