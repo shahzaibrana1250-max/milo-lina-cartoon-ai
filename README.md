@@ -21,6 +21,22 @@ videos for YouTube Shorts. **Phase 1 runs completely free with no API key.**
 - **Saves in your browser** — projects reopen after you close the browser
   (see Storage limits below).
 
+## Phase 2 — Video (added, free tier)
+
+- **Video tab** — plays your project as a real animated video in the
+  browser: Ken Burns camera motion over character art, scene titles and
+  dialogue as subtitles, free device voices per character, cheerful music,
+  and **.webm export** via Record. No key, no account, no cost.
+- **Honest limits:** this is an animatic (motion over still art), not AI
+  motion. Spoken voices play live only — browsers cannot route device
+  speech into a recording, so exports carry music + subtitles, not voices.
+- **Real AI video (optional, paid):** a MiniMax H3 adapter
+  (`js/providers/provider-hailuo.js`) is included. H3 fits these scenes
+  (5–15s, up to 9 reference images, native audio, ~$0.08/s at 768p, no free
+  tier). It needs your own key in the Video tab and is untested live; if a
+  browser call is blocked by CORS, use the exported prompt pack on the
+  provider's website instead.
+
 ## Run it locally
 
 No build step, no install:
@@ -86,5 +102,9 @@ docs/                       User guide + key safety
 
 ## Roadmap
 
-- **Phase 2 (only on request):** activate one real provider adapter with the
-  user's own key for AI story text and/or video rendering.
+- **Phase 2 (in progress):** free in-browser video (animatic + voices +
+  .webm export) is done. The MiniMax H3 adapter is written but needs a key
+  and a live test before it counts as working.
+- **Later, only on request:** baked AI voices (ElevenLabs or similar),
+  multi-scene AI rendering queue, and a free proxy option if browser CORS
+  blocks direct provider calls.

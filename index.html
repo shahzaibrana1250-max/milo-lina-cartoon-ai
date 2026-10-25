@@ -93,6 +93,39 @@
     <div id="promptList"></div>
   </section>
 
+  <!-- ============ VIDEO (Phase 2) ============ -->
+  <section id="page-video" class="page" hidden>
+    <h2>Video</h2>
+    <p class="hint">Play your project as a real animated video — free, no key needed. Scenes animate with slow camera motion over your character art, dialogue is spoken with free device voices, and music plays underneath.</p>
+    <div class="card">
+      <div class="video-wrap"><canvas id="videoCanvas" width="720" height="1280"></canvas></div>
+      <p id="videoStatus" class="meta"></p>
+      <p id="videoInfo" class="hint"></p>
+      <div class="row">
+        <button id="btnPlayVideo" class="btn primary">▶ Play with voices</button>
+        <button id="btnStopVideo" class="btn">⏹ Stop</button>
+      </div>
+      <button id="btnRecordVideo" class="btn">● Record video (.webm)</button>
+      <a id="btnDownloadVideo" class="btn primary" hidden>⬇ Download video</a>
+      <p class="hint">Recording captures animation + music + burned-in subtitles. Spoken voices play live during preview only — browsers cannot route device speech into a recording. This is an animatic (camera motion over still art), not AI-generated motion. For true AI motion, see the MiniMax H3 option below.</p>
+    </div>
+    <div class="card">
+      <h3>Character voices (free, device voices)</h3>
+      <div id="voiceSettings"></div>
+      <p class="hint">Available voices depend on your phone. Milo defaults to a higher pitch, Lina higher still, Bobo the highest and fastest. Change them here; they save automatically.</p>
+    </div>
+    <div class="card">
+      <h3>Real AI video (optional, paid)</h3>
+      <p class="hint">MiniMax H3 is the best fit for these scenes: 5–15 seconds per clip, up to 9 reference images, native audio, about $0.08/second at 768p. No free tier — it needs your own key with balance. The adapter below is untested live (no key yet); if a browser call is blocked by CORS, use the exported prompt pack on the provider's website instead.</p>
+      <label>Base URL <input id="hailuoBase" type="text"></label>
+      <label>Model <input id="hailuoModel" type="text"></label>
+      <label>API key <input id="hailuoKey" type="password" placeholder="Stored only in this browser"></label>
+      <p id="hailuoNote" class="hint"></p>
+      <button id="btnHailuoScene" class="btn">Generate Scene 1 with H3 (test)</button>
+      <div id="hailuoResult"></div>
+    </div>
+  </section>
+
   <!-- ============ SETTINGS ============ -->
   <section id="page-settings" class="page" hidden>
     <h2>Settings</h2>
@@ -123,6 +156,7 @@
   <button data-page="story">📖<span>Story</span></button>
   <button data-page="scenes">🎬<span>Scenes</span></button>
   <button data-page="prompts">📝<span>Prompts</span></button>
+  <button data-page="video">🎥<span>Video</span></button>
   <button data-page="settings">⚙️<span>Settings</span></button>
 </nav>
 
@@ -132,11 +166,13 @@
 <script src="js/prompts.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/export.js"></script>
+<script src="js/video.js"></script>
 <script src="js/providers/provider-base.js"></script>
 <script src="js/providers/provider-demo.js"></script>
 <script src="js/providers/provider-gemini.js"></script>
 <script src="js/providers/provider-kling.js"></script>
 <script src="js/providers/provider-runway.js"></script>
+<script src="js/providers/provider-hailuo.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

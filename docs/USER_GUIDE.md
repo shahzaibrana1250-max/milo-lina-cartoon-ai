@@ -44,7 +44,20 @@ from then on.
 - **Download prompt pack (.md)** saves the same pack as a file.
 - **Download project (.json)** is your full backup.
 
-## 7. Back up regularly
+## 7. Make a video (Video tab)
+
+- **Play with voices** plays the whole project: animated scenes, subtitles,
+  spoken dialogue (free voices built into your phone), and music.
+- **Record video** records the same playback and lets you download a .webm
+  file. Note: the download has music + subtitles but not the spoken voices
+  (a browser limit). Convert .webm to .mp4 with a free converter if Shorts
+  needs .mp4.
+- **Character voices** — pick a voice, pitch, and speed per character.
+- **Real AI video (optional)** — MiniMax H3 can render true AI motion for a
+  scene. It is paid (~$0.08/second at 768p, no free tier), needs your own
+  key, and is untested until you try it. Start with the Scene 1 test button.
+
+## 8. Back up regularly
 
 Your projects live in this browser only. After finishing a project, download
 its JSON backup. If you ever clear browser data or switch phones, import that

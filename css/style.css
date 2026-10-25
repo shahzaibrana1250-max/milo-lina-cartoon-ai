@@ -123,3 +123,15 @@ textarea.prompt-box { min-height: 220px; font-size: 13.5px; font-family: ui-mono
   .topbar { text-align: center; }
   .frame916 { max-width: 170px; }
 }
+
+/* Phase 2 video tab styles (additive). */
+.video-wrap { max-width: 360px; margin: 0 auto 12px; }
+#videoCanvas {
+  width: 100%; height: auto; aspect-ratio: 9 / 16;
+  display: block; border-radius: 14px; background: #000;
+}
+a.btn { text-align: center; text-decoration: none; color: var(--ink); }
+a.btn.primary { color: #fff; }
+#hailuoResult video { width: 100%; border-radius: 12px; margin-top: 10px; }
+.voice-row { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+.voice-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }

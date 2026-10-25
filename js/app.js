@@ -11,6 +11,7 @@
   var ML = window.MiloLina;
   var state = { projects: [], activeId: null, settings: null };
   var toastTimer = null;
+  var videoPlayer = null;
 
   function uid() {
     return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -76,11 +77,16 @@
     document.querySelectorAll('.bottomnav button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-page') === page);
     });
+    if (videoPlayer) {
+      try { videoPlayer.stop(false); } catch (e) { /* ignore */ }
+      videoPlayer = null;
+    }
     if (page === 'projects') renderProjects();
     if (page === 'characters') renderCharacters();
     if (page === 'story') renderStory();
     if (page === 'scenes') renderScenes();
     if (page === 'prompts') renderPrompts();
+    if (page === 'video') renderVideo();
     if (page === 'settings') renderSettings();
     window.scrollTo(0, 0);
   }
@@ -358,6 +364,167 @@
     });
   }
 
+  /* ---------------- Video (Phase 2) ---------------- */
+  function loadPlayerImages() {
+    var jobs = ML.characters.list.map(function (c) {
+      return ML.storage.getImage(c.id).then(function (dataUrl) {
+        return new Promise(function (resolve) {
+          var img = new Image();
+          img.onload = function () { resolve([c.id, img]); };
+          img.onerror = function () { resolve([c.id, null]); };
+          img.src = dataUrl || c.placeholder;
+        });
+      });
+    });
+    return Promise.all(jobs).then(function (pairs) {
+      var out = {};
+      pairs.forEach(function (pr) { if (pr[1]) out[pr[0]] = pr[1]; });
+      return out;
+    });
+  }
+
+  function renderVideo() {
+    var p = getActive();
+    var info = el('videoInfo');
+    if (!p) {
+      info.textContent = 'No active project. Create one on the Projects tab first.';
+      return;
+    }
+    var timeline = ML.video.buildTimeline(p.scenes);
+    var hailuo = ML.providers.get('hailuo');
+    info.textContent = p.scenes.length + ' scenes · ~' + timeline.total + ' seconds · vertical 9:16 · ' +
+      'Real-AI estimate (H3 768p, only if you use it): ~$' + hailuo.estimateCost(timeline.total) + '.';
+    el('btnDownloadVideo').hidden = true;
+    loadPlayerImages().then(function (images) {
+      var placeholders = {};
+      ML.characters.list.forEach(function (c) {
+        var img = new Image();
+        img.src = c.placeholder;
+        placeholders[c.id] = img;
+      });
+      videoPlayer = new ML.video.Player(el('videoCanvas'), {
+        images: images,
+        placeholders: placeholders,
+        voices: (state.settings.voices || {}),
+        onStatus: function (m) { el('videoStatus').textContent = m; },
+        onVideo: function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = el('btnDownloadVideo');
+          a.href = url;
+          a.download = (p.title || 'milo-lina-video').replace(/[^\w\- ]+/g, '') + '.webm';
+          a.hidden = false;
+          toast('Video recorded — tap Download video.');
+        }
+      });
+    });
+    el('btnPlayVideo').onclick = function () {
+      if (!videoPlayer) { toast('Loading images… try again in a second.'); return; }
+      videoPlayer.play(ML.video.buildTimeline(p.scenes), false);
+    };
+    el('btnRecordVideo').onclick = function () {
+      if (!videoPlayer) { toast('Loading images… try again in a second.'); return; }
+      if (typeof MediaRecorder === 'undefined') {
+        toast('Recording is not supported in this browser. Preview still works.');
+        return;
+      }
+      videoPlayer.play(ML.video.buildTimeline(p.scenes), true);
+    };
+    el('btnStopVideo').onclick = function () {
+      if (videoPlayer) videoPlayer.stop(false);
+      el('videoStatus').textContent = 'Stopped.';
+    };
+    renderVoiceSettings();
+    renderHailuoSettings(p);
+  }
+
+  function renderVoiceSettings() {
+    var box = el('voiceSettings');
+    box.innerHTML = '';
+    var available = [];
+    try {
+      available = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : [];
+    } catch (e) { available = []; }
+    state.settings.voices = state.settings.voices || {};
+    ML.characters.list.forEach(function (c) {
+      var cur = state.settings.voices[c.id] || {};
+      var def = ML.video.voiceDefaults[c.id] || { pitch: 1.2, rate: 1.0 };
+      var row = document.createElement('div');
+      row.className = 'voice-row';
+      var opts = '<option value="">Auto voice</option>' + available.map(function (v) {
+        return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === cur.voiceURI ? ' selected' : '') + '>' +
+          esc(v.name) + ' (' + esc(v.lang) + ')</option>';
+      }).join('');
+      row.innerHTML = '<strong>' + esc(c.name) + '</strong>' +
+        '<label>Voice <select data-v="voice">' + opts + '</select></label>' +
+        '<label>Pitch <input type="range" min="0.5" max="2" step="0.1" data-v="pitch" value="' + (cur.pitch !== undefined ? cur.pitch : def.pitch) + '"></label>' +
+        '<label>Speed <input type="range" min="0.8" max="1.4" step="0.05" data-v="rate" value="' + (cur.rate !== undefined ? cur.rate : def.rate) + '"></label>';
+      box.appendChild(row);
+      row.querySelectorAll('[data-v]').forEach(function (input) {
+        input.addEventListener('change', function () {
+          var v = state.settings.voices[c.id] || {};
+          var kind = input.getAttribute('data-v');
+          if (kind === 'voice') v.voiceURI = input.value;
+          if (kind === 'pitch') v.pitch = parseFloat(input.value);
+          if (kind === 'rate') v.rate = parseFloat(input.value);
+          state.settings.voices[c.id] = v;
+          if (videoPlayer) videoPlayer.voices = state.settings.voices;
+          saveAll();
+        });
+      });
+    });
+    if (!available.length) {
+      var note = document.createElement('p');
+      note.className = 'hint';
+      note.textContent = 'No device voices detected yet — reopen this tab in a moment and they usually appear.';
+      box.appendChild(note);
+    }
+  }
+
+  function renderHailuoSettings(p) {
+    state.settings.hailuo = state.settings.hailuo || {};
+    state.settings.keys = state.settings.keys || {};
+    var baseInput = el('hailuoBase');
+    var modelInput = el('hailuoModel');
+    var keyInput = el('hailuoKey');
+    baseInput.value = state.settings.hailuo.baseUrl || 'https://api.minimax.io';
+    modelInput.value = state.settings.hailuo.model || 'minimax-h3';
+    keyInput.value = state.settings.keys.hailuo || '';
+    baseInput.onchange = function () { state.settings.hailuo.baseUrl = baseInput.value.trim(); saveAll(); };
+    modelInput.onchange = function () { state.settings.hailuo.model = modelInput.value.trim(); saveAll(); };
+    keyInput.onchange = function () { state.settings.keys.hailuo = keyInput.value; saveAll(); toast('H3 key saved in this browser only.'); };
+    el('hailuoNote').textContent = state.settings.keys.hailuo
+      ? 'Key saved. Scene 1 test below will spend real money (about $0.80 for a 10-second 768p clip).'
+      : 'No key yet — the test button will ask you to add one first. Nothing is charged until then.';
+    el('btnHailuoScene').onclick = function () {
+      var adapter = ML.providers.get('hailuo');
+      var scene = p.scenes[0];
+      if (!scene) { toast('This project has no scenes.'); return; }
+      var prompt = ML.prompts.buildScene(projectForPrompts(p), scene);
+      var note = el('hailuoNote');
+      note.textContent = 'Collecting reference images…';
+      var refJobs = scene.characters.map(function (id) { return ML.storage.getImage(id); });
+      Promise.all(refJobs).then(function (urls) {
+        var refs = urls.filter(function (u) { return !!u; });
+        note.textContent = 'Sending Scene 1 to H3… (this takes minutes)';
+        return adapter.generateVideo({
+          prompt: prompt,
+          duration: scene.duration,
+          refs: refs,
+          settings: state.settings,
+          onProgress: function (m) { note.textContent = m; }
+        });
+      }).then(function (r) {
+        note.textContent = 'Done! Video ready:';
+        el('hailuoResult').innerHTML =
+          '<video controls src="' + esc(r.videoUrl) + '"></video>' +
+          '<p><a href="' + esc(r.videoUrl) + '" target="_blank" rel="noopener">Open / download Scene 1 video</a></p>';
+        toast('Scene 1 generated with H3.');
+      }).catch(function (e) {
+        note.textContent = 'H3 test failed: ' + (e && e.message ? e.message : e);
+      });
+    };
+  }
+
   /* ---------------- Settings ---------------- */
   function renderSettings() {
     var sel = el('providerSelect');
@@ -368,7 +535,9 @@
     var current = ML.providers.get(state.settings.provider);
     el('providerNote').textContent = current.status === 'ready'
       ? current.name + ' is active. Demo mode costs nothing and sends nothing anywhere.'
-      : current.name + ' is not active in Phase 1. It needs its own adapter (see js/providers/) and your own key later. Nothing is sent anywhere right now.';
+      : (current.status === 'needs-key'
+        ? current.name + ' is ready to test once you add your own key in the Video tab. Nothing is sent until you press Generate.'
+        : current.name + ' is not active yet. It needs its own adapter and your own key later. Nothing is sent anywhere right now.');
     var keys = el('keyFields');
     keys.innerHTML = '';
     ML.providers.list().filter(function (pr) { return pr.needsKey; }).forEach(function (pr) {
