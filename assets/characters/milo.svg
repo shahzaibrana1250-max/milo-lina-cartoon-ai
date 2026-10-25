@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="100" fill="#fff3d6"/>
+  <circle cx="100" cy="88" r="52" fill="#ffd9a0"/>
+  <path d="M58 52 Q100 20 142 52 L138 84 Q100 66 62 84 Z" fill="#ffcf3f"/>
+  <circle cx="84" cy="84" r="6" fill="#2b2118"/>
+  <circle cx="116" cy="84" r="6" fill="#2b2118"/>
+  <path d="M88 104 Q100 114 112 104" stroke="#2b2118" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <rect x="62" y="140" width="76" height="34" rx="10" fill="#ffd23f"/>
+  <text x="100" y="194" text-anchor="middle" font-size="15" font-weight="700" fill="#7a6a58">MILO</text>
+</svg>

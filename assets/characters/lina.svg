@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="100" fill="#ffe4f1"/>
+  <circle cx="100" cy="90" r="50" fill="#ffd9c2"/>
+  <circle cx="52" cy="72" r="16" fill="#8a5a3b"/>
+  <circle cx="148" cy="72" r="16" fill="#8a5a3b"/>
+  <circle cx="84" cy="86" r="6" fill="#2b2118"/>
+  <circle cx="116" cy="86" r="6" fill="#2b2118"/>
+  <path d="M88 106 Q100 116 112 106" stroke="#2b2118" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M70 140 Q100 118 130 140 L124 168 Q100 158 76 168 Z" fill="#ff8fb3"/>
+  <text x="100" y="194" text-anchor="middle" font-size="15" font-weight="700" fill="#7a6a58">LINA</text>
+</svg>

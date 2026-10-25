@@ -1,0 +1,9 @@
+# Never commit secrets. Keys live in the user's browser only (see docs/KEYS.md).
+.env
+.env.*
+*-keys.json
+config.local.js
+secrets.*
+credentials.json
+.DS_Store
+node_modules/

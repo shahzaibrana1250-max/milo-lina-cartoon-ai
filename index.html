@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Milo &amp; Lina Kids — Cartoon Studio</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>🌈 Milo &amp; Lina Kids</h1>
+    <p class="subtitle">Cartoon Studio — free, no API key needed</p>
+  </div>
+  <p id="activeProjectName" class="active-name"></p>
+</header>
+
+<main id="main">
+  <!-- ============ PROJECTS ============ -->
+  <section id="page-projects" class="page">
+    <h2>Projects</h2>
+    <p class="hint">Projects save automatically in this browser. Export regularly as backup.</p>
+    <div class="card">
+      <h3>New project</h3>
+      <label>Title <input id="newTitle" type="text" placeholder="e.g. Milo and the Lost Kite"></label>
+      <label>Theme
+        <select id="newTheme">
+          <option value="">Surprise me</option>
+        </select>
+      </label>
+      <label>Scenes
+        <select id="newScenes">
+          <option value="4">4 scenes</option>
+          <option value="5" selected>5 scenes</option>
+          <option value="6">6 scenes</option>
+        </select>
+      </label>
+      <label>Scene length
+        <select id="newDuration">
+          <option value="10">10 seconds each</option>
+          <option value="12" selected>12 seconds each</option>
+          <option value="15">15 seconds each</option>
+          <option value="mixed">Mixed 10 / 12 / 15</option>
+        </select>
+      </label>
+      <button id="btnCreate" class="btn primary">Create project</button>
+    </div>
+    <div id="projectList"></div>
+    <div class="card">
+      <h3>Import / backup</h3>
+      <button id="btnImport" class="btn">Import project JSON</button>
+      <input id="importFile" type="file" accept=".json,application/json" hidden>
+      <p class="hint">Import restores a project you exported earlier. Reference images are not inside JSON files — re-upload them after import if needed.</p>
+    </div>
+  </section>
+
+  <!-- ============ CHARACTERS ============ -->
+  <section id="page-characters" class="page" hidden>
+    <h2>Characters</h2>
+    <p class="hint">These descriptions are locked into every video prompt. Edit them once and every scene reuses them. Upload a reference image per character — it is saved in this browser and reused too.</p>
+    <div id="characterList"></div>
+  </section>
+
+  <!-- ============ STORY ============ -->
+  <section id="page-story" class="page" hidden>
+    <h2>Story</h2>
+    <div id="storyInfo"></div>
+    <div class="row">
+      <button id="btnGenerate" class="btn primary">Generate new story</button>
+      <button id="btnToScenes" class="btn">See scenes →</button>
+    </div>
+    <div id="storyBeats"></div>
+  </section>
+
+  <!-- ============ SCENES ============ -->
+  <section id="page-scenes" class="page" hidden>
+    <h2>Scenes</h2>
+    <p id="sceneTotal" class="hint"></p>
+    <div id="sceneList"></div>
+    <button id="btnAddScene" class="btn">+ Add scene</button>
+  </section>
+
+  <!-- ============ PROMPTS ============ -->
+  <section id="page-prompts" class="page" hidden>
+    <h2>Scene prompts</h2>
+    <p class="hint">Preview every prompt here before exporting. Copy one scene at a time, or all at once, into any AI video generator.</p>
+    <div class="card sticky-actions">
+      <button id="btnCopyAll" class="btn primary">📋 Copy ALL prompts (one click)</button>
+      <button id="btnDownloadPack" class="btn">Download prompt pack (.md)</button>
+      <button id="btnDownloadMeta" class="btn">Download Shorts info (.txt)</button>
+      <button id="btnDownloadJson" class="btn">Download project (.json)</button>
+    </div>
+    <div id="promptList"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="page-settings" class="page" hidden>
+    <h2>Settings</h2>
+    <div class="card">
+      <h3>Video provider</h3>
+      <label>Provider <select id="providerSelect"></select></label>
+      <p id="providerNote" class="hint"></p>
+      <div id="keyFields"></div>
+      <p class="hint"><strong>Key safety:</strong> any key you type here is stored ONLY in this browser. It is never sent to a server by this app and never written into the GitHub repo. See docs/KEYS.md for details.</p>
+    </div>
+    <div class="card">
+      <h3>Storage — please read</h3>
+      <p class="hint" id="storageNote"></p>
+      <button id="btnClearData" class="btn danger">Delete all app data</button>
+    </div>
+    <div class="card">
+      <h3>About Phase 1</h3>
+      <p class="hint">Phase 1 is completely free: built-in story generator, scene splitter, character locks, prompt builder, and exports. Real AI story/video providers arrive in Phase 2 as separate adapters — the app is already organized for them (see js/providers/). No purchases, no paid services.</p>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<nav class="bottomnav" aria-label="Main navigation">
+  <button data-page="projects">📁<span>Projects</span></button>
+  <button data-page="characters">🎭<span>Characters</span></button>
+  <button data-page="story">📖<span>Story</span></button>
+  <button data-page="scenes">🎬<span>Scenes</span></button>
+  <button data-page="prompts">📝<span>Prompts</span></button>
+  <button data-page="settings">⚙️<span>Settings</span></button>
+</nav>
+
+<script src="js/characters.js"></script>
+<script src="js/story.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/prompts.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/export.js"></script>
+<script src="js/providers/provider-base.js"></script>
+<script src="js/providers/provider-demo.js"></script>
+<script src="js/providers/provider-gemini.js"></script>
+<script src="js/providers/provider-kling.js"></script>
+<script src="js/providers/provider-runway.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

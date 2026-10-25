@@ -1,0 +1,125 @@
+/* Mobile-first styles for Milo & Lina Kids Cartoon Studio.
+   Base font 16px+ on inputs so Android browsers do not auto-zoom.
+   Tap targets are at least 48px tall. One centered column, max 640px. */
+* { box-sizing: border-box; }
+:root {
+  --bg: #fff8ec;
+  --card: #ffffff;
+  --ink: #2b2118;
+  --muted: #7a6a58;
+  --primary: #ff6b35;
+  --primary-dark: #e0531f;
+  --teal: #0e9594;
+  --yellow: #ffd23f;
+  --danger: #d64545;
+  --border: #f0dfc8;
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+.topbar {
+  background: var(--yellow);
+  padding: 14px 16px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  border-bottom: 3px solid #f5b800;
+}
+.topbar h1 { margin: 0; font-size: 22px; }
+.subtitle { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.active-name { margin: 6px 0 0; font-weight: 700; font-size: 14px; }
+main { max-width: 640px; margin: 0 auto; padding: 12px 12px 24px; }
+.page h2 { font-size: 21px; margin: 10px 4px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.card h3 { margin: 0 0 10px; font-size: 17px; }
+.hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
+label { display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px; }
+input[type="text"], input[type="password"], select, textarea {
+  width: 100%;
+  font-size: 16px;
+  padding: 11px 12px;
+  margin-top: 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: #fffdf8;
+  font-family: inherit;
+}
+textarea { resize: vertical; min-height: 76px; line-height: 1.45; }
+textarea.prompt-box { min-height: 220px; font-size: 13.5px; font-family: ui-monospace, monospace; }
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: #efe6d8;
+  color: var(--ink);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.btn:last-child { margin-bottom: 0; }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:active { background: var(--primary-dark); }
+.btn.danger { background: #fde8e8; color: var(--danger); }
+.btn.small { min-height: 40px; font-size: 14px; padding: 8px 10px; }
+.row { display: flex; gap: 10px; }
+.row .btn { flex: 1; }
+.char-img {
+  width: 96px; height: 96px; object-fit: cover;
+  border-radius: 50%; border: 3px solid var(--yellow);
+  background: #fff3d6; display: block; margin-bottom: 10px;
+}
+.frame916 {
+  aspect-ratio: 9 / 16;
+  max-width: 150px;
+  background: linear-gradient(160deg, #ffe9a8, #ffb3a3);
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 10px;
+  font-weight: 700; font-size: 14px;
+  margin-bottom: 10px;
+}
+.frame916 span { font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.scene-head { display: flex; gap: 12px; align-items: flex-start; }
+.scene-fields { flex: 1; min-width: 0; }
+.meta { font-size: 13px; color: var(--muted); }
+.sticky-actions { position: sticky; top: 76px; z-index: 4; }
+.bottomnav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; background: #fff; border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.bottomnav button {
+  flex: 1; border: none; background: none;
+  font-size: 20px; padding: 8px 2px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  color: var(--muted); cursor: pointer; min-height: 60px;
+}
+.bottomnav button span { font-size: 11px; font-weight: 600; }
+.bottomnav button.active { color: var(--primary); }
+.toast {
+  position: fixed; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom));
+  background: #2b2118; color: #fff; text-align: center;
+  padding: 12px; border-radius: 12px; font-size: 15px; z-index: 50;
+}
+@media (min-width: 700px) {
+  .topbar { text-align: center; }
+  .frame916 { max-width: 170px; }
+}
